@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/sign_in_screen.dart';
+import 'screens/dashboard_screen.dart';
 
 void main() {
   runApp(const SlaTaskTrackerApp());
@@ -23,13 +24,10 @@ class SlaTaskTrackerApp extends StatelessWidget {
         '/signin': (context) => const SignInScreen(),
       },
       onGenerateRoute: (settings) {
-        // Placeholder routes — other screens will be added by teammates
         if (settings.name == '/dashboard') {
+          final email = settings.arguments as String? ?? 'user@atlas.dev';
           return MaterialPageRoute(
-            builder: (_) => Scaffold(
-              appBar: AppBar(title: const Text('Dashboard')),
-              body: const Center(child: Text('Dashboard — coming soon')),
-            ),
+            builder: (_) => DashboardScreen(userEmail: email),
           );
         }
         return null;

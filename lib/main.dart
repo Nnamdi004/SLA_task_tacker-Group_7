@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/app_shell.dart';
 import 'screens/sign_in_screen.dart';
+import 'screens/dashboard_screen.dart';
 import 'state/task_store.dart';
 
 Future<void> main() async {
@@ -46,6 +47,15 @@ class SlaTaskTrackerApp extends StatelessWidget {
       routes: {
         // Sign-in screen
         '/signin': (context) => const SignInScreen(),
+      },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/dashboard') {
+          final email = settings.arguments as String? ?? 'user@atlas.dev';
+          return MaterialPageRoute(
+            builder: (_) => DashboardScreen(userEmail: email),
+          );
+        }
+        return null;
 
         // Dashboard tab
         '/dashboard': (context) => AppShell(

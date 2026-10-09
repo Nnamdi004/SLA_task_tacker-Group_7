@@ -1,11 +1,9 @@
+
 import 'package:flutter/material.dart';
 import 'team_member.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  // The signed-in user, passed in from wherever Sign In/User Selection
-  // lands once that screen exists. Defaults to the sample user for now
-  // so this screen can be tested standalone.
   final TeamMember currentUser;
 
   const ProfileScreen({
@@ -26,7 +24,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Local copy of the user so Edit Profile can update the screen with setState.
   late TeamMember _user;
 
   @override
@@ -35,7 +32,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _user = widget.currentUser;
   }
 
-  // Opens the edit form and waits for the updated user to come back.
   Future<void> _openEditProfile() async {
     final updated = await Navigator.push<TeamMember>(
       context,
@@ -62,7 +58,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 16),
 
-          // --- Identity card ---
+          // Identity card
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -71,7 +67,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(radius: 24, child: Text(user.initials)),
+                      CircleAvatar(
+                        radius: 24,
+                        child: Text(user.initials),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -111,7 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 16),
 
-          // --- Workspace card ---
+          // Workspace card
           const Card(
             child: Padding(
               padding: EdgeInsets.all(16),
@@ -131,7 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 16),
 
-          // --- Task progress card ---
+          // Task progress card
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -158,9 +157,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _StatColumn(label: 'Assigned', value: user.assigned),
-                      _StatColumn(label: 'Completed', value: user.completed),
-                      _StatColumn(label: 'Open', value: user.open),
+                      _StatColumn(
+                        label: 'Assigned',
+                        value: user.assigned,
+                      ),
+                      _StatColumn(
+                        label: 'Completed',
+                        value: user.completed,
+                      ),
+                      _StatColumn(
+                        label: 'Open',
+                        value: user.open,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -180,21 +188,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           const Text(
             'Account & settings',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
-          _SettingsTile(icon: Icons.notifications_outlined, label: 'Notifications'),
-          _SettingsTile(icon: Icons.shield_outlined, label: 'Password & security'),
-          _SettingsTile(icon: Icons.help_outline, label: 'Help & support'),
+          _SettingsTile(
+            icon: Icons.notifications_outlined,
+            label: 'Notifications',
+          ),
+          _SettingsTile(
+            icon: Icons.shield_outlined,
+            label: 'Password & security',
+          ),
+          _SettingsTile(
+            icon: Icons.help_outline,
+            label: 'Help & support',
+          ),
           const SizedBox(height: 16),
 
           Center(
             child: TextButton.icon(
               onPressed: () {
-                // Hook up to a sign-out flow once Sign In exists.
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/signup',
+                  (route) => false,
+                );
               },
               icon: const Icon(Icons.logout, color: Colors.red),
-              label: const Text('Sign out', style: TextStyle(color: Colors.red)),
+              label: const Text(
+                'Sign out',
+                style: TextStyle(color: Colors.red),
+              ),
             ),
           ),
         ],
@@ -207,7 +234,10 @@ class _StatColumn extends StatelessWidget {
   final String label;
   final int value;
 
-  const _StatColumn({required this.label, required this.value});
+  const _StatColumn({
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -215,9 +245,18 @@ class _StatColumn extends StatelessWidget {
       children: [
         Text(
           '$value',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 12,
+          ),
+        ),
       ],
     );
   }
@@ -227,7 +266,10 @@ class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _SettingsTile({required this.icon, required this.label});
+  const _SettingsTile({
+    required this.icon,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {

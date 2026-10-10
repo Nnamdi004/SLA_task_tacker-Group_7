@@ -235,7 +235,7 @@ class _TaskFormState extends State<TaskForm> {
 
           _dropdown(
             value: assignee,
-            items: const ['Liata Ornella', 'Daniel', 'John', 'Sarah'],
+            items: const ['Nnamdi Onugha', 'Liata Ornella', 'Divine Mutesi', 'Tumba II Kongolo'],
             onChanged: (value) {
               if (value != null) {
                 setState(() {

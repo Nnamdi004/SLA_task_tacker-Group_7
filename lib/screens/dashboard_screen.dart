@@ -3,7 +3,19 @@ import 'package:intl/intl.dart';
 
 class DashboardScreen extends StatelessWidget {
   final String userEmail;
-  const DashboardScreen({super.key, required this.userEmail});
+
+  /// Called by the "+ Create task" button. AppShell opens the Create screen.
+  final VoidCallback? onCreateTask;
+
+  /// Called by "View all →". AppShell switches to the Tasks tab.
+  final VoidCallback? onViewAll;
+
+  const DashboardScreen({
+    super.key,
+    required this.userEmail,
+    this.onCreateTask,
+    this.onViewAll,
+  });
 
   String get _userName {
     final name = userEmail.split('@').first;
@@ -200,7 +212,7 @@ class DashboardScreen extends StatelessWidget {
                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                         ),
                         TextButton(
-                          onPressed: () => Navigator.pushNamed(context, '/tasks'),
+                          onPressed: onViewAll,
                           style: TextButton.styleFrom(
                             padding: EdgeInsets.zero,
                             minimumSize: Size.zero,
@@ -247,7 +259,7 @@ class DashboardScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: FloatingActionButton.extended(
-            onPressed: () => Navigator.pushNamed(context, '/create-task'),
+            onPressed: onCreateTask,
             backgroundColor: const Color(0xFF2D5BE3),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             label: const Text(
@@ -258,7 +270,7 @@ class DashboardScreen extends StatelessWidget {
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      bottomNavigationBar: const _BottomNav(currentIndex: 0),
+      // The bottom navigation bar now lives in AppShell (app_shell.dart).
     );
   }
 }
@@ -459,38 +471,6 @@ class _Chip extends StatelessWidget {
         label,
         style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
       ),
-    );
-  }
-}
-
-class _BottomNav extends StatelessWidget {
-  final int currentIndex;
-  const _BottomNav({required this.currentIndex});
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: currentIndex,
-      selectedItemColor: const Color(0xFF2D5BE3),
-      unselectedItemColor: Colors.black38,
-      backgroundColor: Colors.white,
-      type: BottomNavigationBarType.fixed,
-      selectedFontSize: 11,
-      unselectedFontSize: 11,
-      onTap: (index) {
-        switch (index) {
-          case 0: Navigator.pushReplacementNamed(context, '/dashboard'); break;
-          case 1: Navigator.pushReplacementNamed(context, '/tasks'); break;
-          case 2: Navigator.pushReplacementNamed(context, '/team'); break;
-          case 3: Navigator.pushReplacementNamed(context, '/profile'); break;
-        }
-      },
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Dashboard'),
-        BottomNavigationBarItem(icon: Icon(Icons.checklist_outlined), activeIcon: Icon(Icons.checklist), label: 'Tasks'),
-        BottomNavigationBarItem(icon: Icon(Icons.group_outlined), activeIcon: Icon(Icons.group), label: 'Team'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
-      ],
     );
   }
 }

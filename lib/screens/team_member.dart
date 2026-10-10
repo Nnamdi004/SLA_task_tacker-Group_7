@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'team_member.dart';
 
 // Colors taken from the Figma design.
 const _bg = Color(0xFFF8FAFC);

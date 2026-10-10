@@ -2,12 +2,25 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../state/task_store.dart';
+import 'dashboard_screen.dart';
+import 'profile_screen.dart';
 import 'task_list_screen.dart';
+import 'team_member.dart'; // contains TeamScreen and TeamMember
 
 class AppShell extends StatefulWidget {
   final TaskStore store;
   final int initialIndex;
-  const AppShell({super.key, required this.store, this.initialIndex = 0});
+
+  /// Email of the signed-in user, shown on the Dashboard greeting.
+  /// Defaults to the sample user until Sign In passes the real one.
+  final String userEmail;
+
+  const AppShell({
+    super.key,
+    required this.store,
+    this.initialIndex = 0,
+    this.userEmail = 'nnamdi@atlas.dev',
+  });
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -57,16 +70,22 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
+  void _goToTab(int i) => setState(() => _index = i);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
         index: _index,
         children: [
-          // TODO(teammate): replace with DashboardScreen
-          const Center(child: Text('Dashboard — coming soon')),
+          // Dashboard
+          DashboardScreen(
+            userEmail: widget.userEmail,
+            onCreateTask: _createTask,
+            onViewAll: () => _goToTab(1), // "View all" jumps to the Tasks tab
+          ),
 
-          // Task List (this screen)
+          // Task List
           ListenableBuilder(
             listenable: widget.store,
             builder: (_, _) => TaskListScreen(
@@ -78,16 +97,16 @@ class _AppShellState extends State<AppShell> {
             ),
           ),
 
-          // TODO(teammate): replace with TeamScreen
-          const Center(child: Text('Team — coming soon')),
+          // Team
+          const TeamScreen(),
 
-          // TODO(teammate): replace with ProfileScreen
-          const Center(child: Text('Profile — coming soon')),
+          // Profile
+          const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: _goToTab,
         destinations: const [
           NavigationDestination(
               icon: Icon(Icons.grid_view_rounded), label: 'Dashboard'),

@@ -1,45 +1,46 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../screens/task_list_screen.dart'; // for Task
 
+import '../database/database_helper.dart';
+import '../models/task.dart';
+
+/// Single source of truth for tasks. Reads and writes go to the sqflite
+/// database, and listeners (the screens) are notified after every change.
 class TaskStore extends ChangeNotifier {
-  TaskStore(this._prefs);
+  TaskStore({DatabaseHelper? db}) : _db = db ?? DatabaseHelper.instance;
 
-  static const _key = 'tasks_v1';
-  final SharedPreferences _prefs;
-  final List<Task> _tasks = [];
+  final DatabaseHelper _db;
+  List<Task> _tasks = [];
+
+  /// Set when the last database call failed; null otherwise.
+  String? lastError;
 
   List<Task> get tasks => List.unmodifiable(_tasks);
 
-  void load() {
-    final raw = _prefs.getString(_key);
-    if (raw == null) return;
+  Future<void> load() async {
     try {
-      _tasks
-        ..clear()
-        ..addAll((jsonDecode(raw) as List)
-            .map((e) => Task.fromJson(e as Map<String, dynamic>)));
-    } catch (_) {
-      // Corrupt data: start empty rather than crash.
-      _tasks.clear();
+      _tasks = await _db.getTasks();
+      lastError = null;
+    } catch (e) {
+      lastError = 'Could not load tasks: $e';
     }
+    notifyListeners();
   }
 
   Future<void> add(Task task) async {
-    _tasks.add(task);
-    notifyListeners();
-    await _save();
+    try {
+      await _db.insertTask(task);
+    } catch (e) {
+      lastError = 'Could not save task: $e';
+    }
+    await load();
   }
 
   Future<void> update(Task task) async {
-    final i = _tasks.indexWhere((t) => t.id == task.id);
-    if (i == -1) return;
-    _tasks[i] = task;
-    notifyListeners();
-    await _save();
+    try {
+      await _db.updateTask(task);
+    } catch (e) {
+      lastError = 'Could not update task: $e';
+    }
+    await load();
   }
-
-  Future<void> _save() => _prefs.setString(
-      _key, jsonEncode(_tasks.map((t) => t.toJson()).toList()));
 }

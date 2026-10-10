@@ -1,18 +1,21 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import '../models/task.dart';
 import '../state/task_store.dart';
+import 'create_task_screen.dart';
 import 'dashboard_screen.dart';
 import 'profile_screen.dart';
+import 'task_details_screen.dart';
 import 'task_list_screen.dart';
-import 'team_member.dart'; // contains TeamScreen and TeamMember
+import 'team_member.dart'; // TeamScreen, TeamMember, kTeamRoster
 
+/// Holds the bottom navigation and connects every screen to the TaskStore.
 class AppShell extends StatefulWidget {
   final TaskStore store;
   final int initialIndex;
 
-  /// Email of the signed-in user, shown on the Dashboard greeting.
-  /// Defaults to the sample user until Sign In passes the real one.
+  /// Email of the signed-in user (passed from Sign In).
   final String userEmail;
 
   const AppShell({
@@ -45,18 +48,32 @@ class _AppShellState extends State<AppShell> {
     super.dispose();
   }
 
-  Future<void> _createTask() async {
-    final created = await Navigator.push<Task>(
+  /// The roster member whose email matches the signed-in user.
+  TeamMember get _currentUser => kTeamRoster.firstWhere(
+        (m) => m.email.toLowerCase() == widget.userEmail.toLowerCase(),
+        orElse: () => kTeamRoster.first,
+      );
+
+  void _goToTab(int i) => setState(() => _index = i);
+
+  // The form validates, calls onSave with the new Task, then closes itself.
+  void _createTask() {
+    Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const _CreateTaskStub()),
+      MaterialPageRoute(
+        builder: (_) => CreateTaskScreen(onSave: widget.store.add),
+      ),
     );
-    if (created != null) await widget.store.add(created);
   }
 
   void _openDetails(Task task) {
+    final id = task.id;
+    if (id == null) return;
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => _TaskDetailsStub(task: task)),
+      MaterialPageRoute(
+        builder: (_) => TaskDetailsScreen(store: widget.store, taskId: id),
+      ),
     );
   }
 
@@ -70,39 +87,38 @@ class _AppShellState extends State<AppShell> {
     );
   }
 
-  void _goToTab(int i) => setState(() => _index = i);
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _index,
-        children: [
-          // Dashboard
-          DashboardScreen(
-            userEmail: widget.userEmail,
-            onCreateTask: _createTask,
-            onViewAll: () => _goToTab(1), // "View all" jumps to the Tasks tab
-          ),
-
-          // Task List
-          ListenableBuilder(
-            listenable: widget.store,
-            builder: (_, _) => TaskListScreen(
-              tasks: widget.store.tasks,
-              now: DateTime.now(),
-              onCreateTask: _createTask,
-              onTaskTap: _openDetails,
-              onFilterTap: _openFilters,
-            ),
-          ),
-
-          // Team
-          const TeamScreen(),
-
-          // Profile
-          const ProfileScreen(),
-        ],
+      // One listener: whenever a task is added or changed, every tab rebuilds
+      // with the new list.
+      body: ListenableBuilder(
+        listenable: widget.store,
+        builder: (context, _) {
+          final tasks = widget.store.tasks;
+          final now = DateTime.now();
+          return IndexedStack(
+            index: _index,
+            children: [
+              DashboardScreen(
+                userEmail: widget.userEmail,
+                tasks: tasks,
+                onCreateTask: _createTask,
+                onViewAll: () => _goToTab(1),
+                onTaskTap: _openDetails,
+              ),
+              TaskListScreen(
+                tasks: tasks,
+                now: now,
+                onCreateTask: _createTask,
+                onTaskTap: _openDetails,
+                onFilterTap: _openFilters,
+              ),
+              TeamScreen(tasks: tasks),
+              ProfileScreen(currentUser: _currentUser, tasks: tasks),
+            ],
+          );
+        },
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
@@ -120,83 +136,4 @@ class _AppShellState extends State<AppShell> {
       ),
     );
   }
-}
-
-// ---------------------------------------------------------------------------
-// Temporary stubs so the Task List flow works end to end.
-// Delete these when the real Task Details and Create/Edit screens are merged.
-// ---------------------------------------------------------------------------
-
-class _TaskDetailsStub extends StatelessWidget {
-  final Task task;
-  const _TaskDetailsStub({required this.task});
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Task details')),
-        body: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Text(task.title, style: const TextStyle(fontSize: 22)),
-        ),
-      );
-}
-
-class _CreateTaskStub extends StatefulWidget {
-  const _CreateTaskStub();
-
-  @override
-  State<_CreateTaskStub> createState() => _CreateTaskStubState();
-}
-
-class _CreateTaskStubState extends State<_CreateTaskStub> {
-  final _title = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-
-  @override
-  void dispose() {
-    _title.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    if (!_formKey.currentState!.validate()) return;
-    final now = DateTime.now();
-    Navigator.pop(
-      context,
-      Task(
-        id: now.microsecondsSinceEpoch.toString(),
-        title: _title.text.trim(),
-        description: 'Added from the stub form.',
-        assignee: 'Nnamdi Onugha',
-        priority: Priority.medium,
-        status: TaskStatus.todo,
-        deadline: now.add(const Duration(hours: 12)),
-        createdAt: now,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Create task')),
-        body: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: _title,
-                  decoration: const InputDecoration(labelText: 'Title *'),
-                  validator: (v) => (v == null || v.trim().isEmpty)
-                      ? 'A task title is required.'
-                      : null,
-                ),
-                const SizedBox(height: 20),
-                FilledButton(onPressed: _save, child: const Text('Save task')),
-              ],
-            ),
-          ),
-        ),
-      );
 }

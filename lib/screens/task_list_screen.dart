@@ -1,75 +1,6 @@
 import 'package:flutter/material.dart';
 
-// ---------------------------------------------------------------------------
-// Models + SLA logic
-// (Later your group can move these into lib/models/task.dart)
-// ---------------------------------------------------------------------------
-
-enum TaskStatus { todo, inProgress, completed }
-
-enum Priority { low, medium, high }
-
-enum SlaStatus { onTrack, atRisk, overdue, completed }
-
-class Task {
-  final String id;
-  final String title;
-  final String description;
-  final String assignee;
-  final Priority priority;
-  final TaskStatus status;
-  final DateTime deadline;
-  final DateTime createdAt;
-
-  const Task({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.assignee,
-    required this.priority,
-    required this.status,
-    required this.deadline,
-    required this.createdAt,
-  });
-
-  /// SLA rules (explain these in your demo):
-  /// 1. Completed task                       -> Completed
-  /// 2. Incomplete and deadline has passed   -> Overdue
-  /// 3. Incomplete and due within 24 hours   -> At Risk
-  /// 4. Anything else                        -> On Track
-  SlaStatus sla(DateTime now) {
-    if (status == TaskStatus.completed) return SlaStatus.completed;
-    if (deadline.isBefore(now)) return SlaStatus.overdue;
-    if (deadline.difference(now) <= const Duration(hours: 24)) {
-      return SlaStatus.atRisk;
-    }
-    return SlaStatus.onTrack;
-  }
-
-  // ---- Persistence (used by TaskStore / SharedPreferences) ----
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'description': description,
-        'assignee': assignee,
-        'priority': priority.name,
-        'status': status.name,
-        'deadline': deadline.toIso8601String(),
-        'createdAt': createdAt.toIso8601String(),
-      };
-
-  factory Task.fromJson(Map<String, dynamic> j) => Task(
-        id: j['id'] as String,
-        title: j['title'] as String,
-        description: j['description'] as String,
-        assignee: j['assignee'] as String,
-        priority: Priority.values.byName(j['priority'] as String),
-        status: TaskStatus.values.byName(j['status'] as String),
-        deadline: DateTime.parse(j['deadline'] as String),
-        createdAt: DateTime.parse(j['createdAt'] as String),
-      );
-}
+import '../models/task.dart';
 
 // ---------------------------------------------------------------------------
 // Design tokens (approximated from the Figma screens)
@@ -97,6 +28,7 @@ class _C {
 // ---------------------------------------------------------------------------
 // Task List screen
 // The bottom navigation bar lives in AppShell (app_shell.dart), not here.
+// The Task model and SLA rules live in models/task.dart.
 // ---------------------------------------------------------------------------
 
 enum _Filter { all, todo, inProgress, completed, overdue }
@@ -136,6 +68,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
     super.dispose();
   }
 
+  /// Search -> filter -> sort. Newest = highest database id.
   List<Task> get _visible {
     final q = _query.trim().toLowerCase();
     final list = widget.tasks.where((t) {
@@ -147,19 +80,19 @@ class _TaskListScreenState extends State<TaskListScreen> {
         case _Filter.all:
           return true;
         case _Filter.todo:
-          return t.status == TaskStatus.todo;
+          return t.status == 'To Do';
         case _Filter.inProgress:
-          return t.status == TaskStatus.inProgress;
+          return t.status == 'In Progress';
         case _Filter.completed:
-          return t.status == TaskStatus.completed;
+          return t.status == 'Completed';
         case _Filter.overdue:
           return t.sla(widget.now) == SlaStatus.overdue;
       }
     }).toList();
 
     list.sort((a, b) => _recentFirst
-        ? b.createdAt.compareTo(a.createdAt)
-        : a.createdAt.compareTo(b.createdAt));
+        ? (b.id ?? 0).compareTo(a.id ?? 0)
+        : (a.id ?? 0).compareTo(b.id ?? 0));
     return list;
   }
 
@@ -467,13 +400,13 @@ class _TaskCard extends StatelessWidget {
               Row(
                 children: [
                   _Pill(
-                    label: _statusLabel(task.status),
+                    label: task.status,
                     fg: _statusFg(task.status),
                     bg: _statusBg(task.status),
                   ),
                   const SizedBox(width: 8),
                   _Pill(
-                    label: _slaLabel(sla),
+                    label: sla.label,
                     fg: _slaFg(sla),
                     bg: _slaBg(sla),
                   ),
@@ -495,34 +428,19 @@ class _TaskCard extends StatelessWidget {
 
   String _formatDeadline(DateTime d) {
     final dd = d.day.toString().padLeft(2, '0');
-    final hh = d.hour.toString().padLeft(2, '0');
-    final mm = d.minute.toString().padLeft(2, '0');
-    return '$dd ${_months[d.month - 1]}, $hh:$mm';
+    return '$dd ${_months[d.month - 1]} ${d.year}';
   }
 
-  String _statusLabel(TaskStatus s) => switch (s) {
-        TaskStatus.todo => 'To Do',
-        TaskStatus.inProgress => 'In Progress',
-        TaskStatus.completed => 'Completed',
+  Color _statusFg(String s) => switch (s) {
+        'In Progress' => _C.primary,
+        'Completed' => _C.green,
+        _ => _C.muted,
       };
 
-  Color _statusFg(TaskStatus s) => switch (s) {
-        TaskStatus.todo => _C.muted,
-        TaskStatus.inProgress => _C.primary,
-        TaskStatus.completed => _C.green,
-      };
-
-  Color _statusBg(TaskStatus s) => switch (s) {
-        TaskStatus.todo => _C.grayBg,
-        TaskStatus.inProgress => _C.blueBg,
-        TaskStatus.completed => _C.greenBg,
-      };
-
-  String _slaLabel(SlaStatus s) => switch (s) {
-        SlaStatus.onTrack => 'On Track',
-        SlaStatus.atRisk => 'At Risk',
-        SlaStatus.overdue => 'Overdue',
-        SlaStatus.completed => 'Completed',
+  Color _statusBg(String s) => switch (s) {
+        'In Progress' => _C.blueBg,
+        'Completed' => _C.greenBg,
+        _ => _C.grayBg,
       };
 
   Color _slaFg(SlaStatus s) => switch (s) {
@@ -541,17 +459,17 @@ class _TaskCard extends StatelessWidget {
 }
 
 class _PriorityLabel extends StatelessWidget {
-  final Priority priority;
+  final String priority; // 'Low' | 'Medium' | 'High'
   const _PriorityLabel({required this.priority});
 
   @override
   Widget build(BuildContext context) {
-    final (label, fg, bg) = switch (priority) {
-      Priority.high => ('High', _C.red, _C.redBg),
-      Priority.medium => ('Medium', _C.amber, _C.amberBg),
-      Priority.low => ('Low', _C.green, _C.greenBg),
+    final (fg, bg) = switch (priority) {
+      'High' => (_C.red, _C.redBg),
+      'Medium' => (_C.amber, _C.amberBg),
+      _ => (_C.green, _C.greenBg),
     };
-    return _Pill(label: label, fg: fg, bg: bg, small: true);
+    return _Pill(label: priority, fg: fg, bg: bg, small: true);
   }
 }
 

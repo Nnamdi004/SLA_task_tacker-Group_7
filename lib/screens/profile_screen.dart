@@ -1,21 +1,28 @@
-
 import 'package:flutter/material.dart';
-import 'team_member.dart';
+
+import '../models/task.dart';
 import 'edit_profile_screen.dart';
+import 'team_member.dart';
 
 class ProfileScreen extends StatefulWidget {
+  /// The signed-in user. Task counts on this object are ignored; they are
+  /// recalculated from [tasks].
   final TeamMember currentUser;
+
+  /// All tasks from the TaskStore, used for "My task progress".
+  final List<Task> tasks;
 
   const ProfileScreen({
     super.key,
+    this.tasks = const [],
     this.currentUser = const TeamMember(
       id: '1',
       name: 'Nnamdi Onugha',
       role: 'Team lead · Frontend',
       email: 'nnamdi@atlas.dev',
-      assigned: 4,
-      completed: 2,
-      open: 2,
+      assigned: 0,
+      completed: 0,
+      open: 0,
     ),
   });
 
@@ -44,7 +51,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = _user;
+    // Counts are calculated from the real tasks assigned to this user.
+    final user = _user.withTaskCounts(widget.tasks);
     final progress = user.completionRate;
 
     return Scaffold(
@@ -211,9 +219,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Center(
             child: TextButton.icon(
               onPressed: () {
+                // Back to Sign In, clearing the navigation history.
                 Navigator.pushNamedAndRemoveUntil(
                   context,
-                  '/signup',
+                  '/signin',
                   (route) => false,
                 );
               },

@@ -121,6 +121,10 @@ The task-list workflow is the primary implemented flow. The application shell al
 
 Profile components are present, while some shell destinations and task details/filter actions still contain placeholder or in-progress UI and are intended to be completed as the project evolves.
 
+## AI Usage Declaration
+
+AI tools were used for assistance during development and documentation. The project team is responsible for reviewing, testing, verifying, and understanding all submitted code.
+
 ## Contributing
 
 1. Create a feature branch.

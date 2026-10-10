@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../models/task.dart';
+
 // Colors taken from the Figma design.
 const _bg = Color(0xFFF8FAFC);
 const _border = Color(0xFFE2E8F0);
@@ -9,9 +11,6 @@ const _blue = Color(0xFF2563EB);
 const _green = Color(0xFF15803D);
 const _navy = Color(0xFF172554);
 const _paleBlue = Color(0xFFEEF2FF);
-
-// Placeholder until the Tasks screen provides real SLA data.
-const _overdueTasks = 1;
 
 class TeamMember {
   final String id;
@@ -42,66 +41,88 @@ class TeamMember {
       .take(2)
       .join()
       .toUpperCase();
+
+  /// Returns a copy whose assigned / completed / open counts are calculated
+  /// from the real tasks. A task belongs to a member when the task's
+  /// assignee name matches the member's name.
+  TeamMember withTaskCounts(List<Task> tasks) {
+    final mine = tasks.where(
+      (t) => t.assignee.trim().toLowerCase() == name.trim().toLowerCase(),
+    );
+    final total = mine.length;
+    final done = mine.where((t) => t.isCompleted).length;
+    return TeamMember(
+      id: id,
+      name: name,
+      role: role,
+      email: email,
+      assigned: total,
+      completed: done,
+      open: total - done,
+    );
+  }
 }
 
-class TeamScreen extends StatefulWidget {
-  const TeamScreen({super.key});
+/// The fixed team roster. The task counts here are placeholders; the screens
+/// call [TeamMember.withTaskCounts] to get the real numbers.
+const List<TeamMember> kTeamRoster = [
+  TeamMember(
+    id: '1',
+    name: 'Nnamdi Onugha',
+    role: 'Team lead · Frontend',
+    email: 'nnamdi@atlas.dev',
+    assigned: 0,
+    completed: 0,
+    open: 0,
+  ),
+  TeamMember(
+    id: '2',
+    name: 'Liata Ornella',
+    role: 'Backend developer',
+    email: 'liata@atlas.dev',
+    assigned: 0,
+    completed: 0,
+    open: 0,
+  ),
+  TeamMember(
+    id: '3',
+    name: 'Divine Mutesi',
+    role: 'QA engineer',
+    email: 'divine@atlas.dev',
+    assigned: 0,
+    completed: 0,
+    open: 0,
+  ),
+  TeamMember(
+    id: '4',
+    name: 'Tumba II Kongolo',
+    role: 'Mobile developer',
+    email: 'tumba@atlas.dev',
+    assigned: 0,
+    completed: 0,
+    open: 0,
+  ),
+];
 
-  @override
-  State<TeamScreen> createState() => _TeamScreenState();
-}
+class TeamScreen extends StatelessWidget {
+  /// All tasks from the TaskStore. Member counts and team progress are
+  /// calculated from this list.
+  final List<Task> tasks;
 
-class _TeamScreenState extends State<TeamScreen> {
-  // Sample data matching the Figma mock. Replace with data loaded from
-  // SharedPreferences/sqflite once the group's storage layer is wired in.
-  final List<TeamMember> _members = const [
-    TeamMember(
-      id: '1',
-      name: 'Nnamdi Onugha',
-      role: 'Team lead · Frontend',
-      email: 'nnamdi@atlas.dev',
-      assigned: 4,
-      completed: 2,
-      open: 2,
-    ),
-    TeamMember(
-      id: '2',
-      name: 'Liata Ornella',
-      role: 'Backend developer',
-      email: 'liata@atlas.dev',
-      assigned: 3,
-      completed: 2,
-      open: 1,
-    ),
-    TeamMember(
-      id: '3',
-      name: 'Divine Mutesi',
-      role: 'QA engineer',
-      email: 'divine@atlas.dev',
-      assigned: 3,
-      completed: 1,
-      open: 2,
-    ),
-    TeamMember(
-      id: '4',
-      name: 'Tumba II Kongolo',
-      role: 'Mobile developer',
-      email: 'tumba@atlas.dev',
-      assigned: 2,
-      completed: 1,
-      open: 1,
-    ),
-  ];
-
-  // Team-wide numbers are derived from the member data, not hardcoded.
-  int get _totalCompleted => _members.fold(0, (sum, m) => sum + m.completed);
-  int get _totalAssigned => _members.fold(0, (sum, m) => sum + m.assigned);
-  int get _totalOpen => _members.fold(0, (sum, m) => sum + m.open);
-  double get _teamProgress =>
-      _totalAssigned == 0 ? 0 : _totalCompleted / _totalAssigned;
+  const TeamScreen({super.key, required this.tasks});
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final members = kTeamRoster.map((m) => m.withTaskCounts(tasks)).toList();
+
+    // Team-wide numbers come from the tasks themselves.
+    final total = tasks.length;
+    final completed = tasks.where((t) => t.isCompleted).length;
+    final open = total - completed;
+    final overdue = tasks.where((t) => t.sla(now) == SlaStatus.overdue).length;
+    final progress = total == 0 ? 0.0 : completed / total;
+
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
@@ -128,13 +149,8 @@ class _TeamScreenState extends State<TeamScreen> {
               ],
             ),
             Text(
-              'Atlas development · ${_members.length} members',
+              'Atlas development · ${members.length} members',
               style: const TextStyle(fontSize: 14, color: _muted),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'SAMPLE SNAPSHOT · 03 OCT 2026, 10:00 UTC',
-              style: TextStyle(fontSize: 11, color: _muted, letterSpacing: 0.4),
             ),
             const SizedBox(height: 16),
 
@@ -155,7 +171,7 @@ class _TeamScreenState extends State<TeamScreen> {
                         ),
                       ),
                       Text(
-                        '${(_teamProgress * 100).round()}%',
+                        '${(progress * 100).round()}%',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -165,11 +181,11 @@ class _TeamScreenState extends State<TeamScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _ProgressBar(value: _teamProgress),
+                  _ProgressBar(value: progress),
                   const SizedBox(height: 10),
                   Text(
-                    '$_totalCompleted of $_totalAssigned completed · '
-                    '$_totalOpen open · $_overdueTasks overdue',
+                    '$completed of $total completed · '
+                    '$open open · $overdue overdue',
                     style: const TextStyle(fontSize: 13, color: _muted),
                   ),
                 ],
@@ -187,7 +203,7 @@ class _TeamScreenState extends State<TeamScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            ..._members.map(
+            ...members.map(
               (m) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: _MemberCard(member: m, highlighted: m.id == '1'),
